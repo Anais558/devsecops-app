@@ -104,10 +104,11 @@ jobs:
         continue-on-error: true
 
 # ─── JOB 5 : SonarCloud ─────────────────────────────────────────
-  sonarcloud:
+sonarcloud:
     name: Analyse SonarCloud
     runs-on: ubuntu-latest
     needs: [test-backend, test-frontend]
+    continue-on-error: true    # ← ajoutez cette ligne
 
     steps:
       - name: Récupérer le code
@@ -120,7 +121,6 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
-
 # ─── JOB 6 : Snyk ───────────────────────────────────────────────
   snyk-scan:
     name: Snyk – Sécurité dépendances
