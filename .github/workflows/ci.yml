@@ -102,3 +102,54 @@ jobs:
         working-directory: frontend
         run: npm audit --audit-level=high
         continue-on-error: true
+
+# ─── JOB 5 : SonarCloud ─────────────────────────────────────────
+  sonarcloud:
+    name: Analyse SonarCloud
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Analyse SonarCloud
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+
+# ─── JOB 6 : Snyk ───────────────────────────────────────────────
+  snyk-scan:
+    name: Snyk – Sécurité dépendances
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Installer Snyk
+        run: npm install -g snyk
+
+      - name: Scan Backend
+        working-directory: backend
+        run: snyk test --severity-threshold=high
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        continue-on-error: true
+
+      - name: Scan Frontend
+        working-directory: frontend
+        run: snyk test --severity-threshold=high
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        continue-on-error: true
