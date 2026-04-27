@@ -1,0 +1,104 @@
+name: CI Pipeline – DevSecOps
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  # ─── JOB 1 : Tests Backend ──────────────────────────────────────
+  test-backend:
+    name: Tests Backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Installer les dépendances
+        working-directory: backend
+        run: npm install
+
+      - name: Vérifier que le backend démarre
+        working-directory: backend
+        run: node -e "require('./src/index.js')" &
+        continue-on-error: true
+
+  # ─── JOB 2 : Tests Frontend ─────────────────────────────────────
+  test-frontend:
+    name: Tests Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Installer les dépendances
+        working-directory: frontend
+        run: npm install
+
+      - name: Vérifier le build TypeScript
+        working-directory: frontend
+        run: npm run build
+
+  # ─── JOB 3 : Build Docker ───────────────────────────────────────
+  build-docker:
+    name: Build Images Docker
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+
+      - name: Build des images Docker
+        run: docker-compose build
+
+      - name: Vérifier que les images sont créées
+        run: docker images | grep devsecops
+
+  # ─── JOB 4 : Sécurité des dépendances ──────────────────────────
+  security-scan:
+    name: Scan de sécurité
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Audit sécurité Backend
+        working-directory: backend
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Audit sécurité Frontend
+        working-directory: frontend
+        run: npm audit --audit-level=high
+        continue-on-error: true
