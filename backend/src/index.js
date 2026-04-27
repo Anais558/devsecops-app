@@ -3,10 +3,22 @@ const cors = require('cors')
 const { Pool } = require('pg')
 require('dotenv').config()
 
+
 const app = express()
 app.use(cors())
 app.use(express.json())
 
+const client = require('prom-client')
+
+// Métriques automatiques (CPU, mémoire, etc.)
+const collectDefaultMetrics = client.collectDefaultMetrics
+collectDefaultMetrics()
+
+// Endpoint métriques pour Prometheus
+app.get('/metrics', async (req, res) => {
+    res.set('Content-Type', client.register.contentType)
+    res.end(await client.register.metrics())
+})
 const pool = new Pool({
     host: process.env.DB_HOST || 'localhost',
     port: Number(process.env.DB_PORT) || 5432,
