@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { KeyboardEvent } from 'react'
 
-const API = 'http://localhost:3001/api'
+const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api'
 
 interface Todo {
   id: number
@@ -9,38 +9,66 @@ interface Todo {
   done: boolean
 }
 
+async function apiFetch(url: string, options?: RequestInit): Promise<Response> {
+  const res = await fetch(url, options)
+  if (!res.ok) throw new Error(`HTTP error: ${res.status}`)
+  return res
+}
+
 export default function App() {
   const [todos, setTodos] = useState<Todo[]>([])
   const [text, setText] = useState<string>('')
+  const [error, setError] = useState<string | null>(null)
 
-  // Charger les todos depuis la BDD au démarrage
-  useEffect(() => {
-    fetch(`${API}/todos`)
-      .then(r => r.json())
-      .then(data => setTodos(data))
+  const loadTodos = useCallback(async () => {
+    try {
+      const res = await apiFetch(`${API}/todos`)
+      const data: Todo[] = await res.json()
+      setTodos(data)
+    } catch {
+      setError('Impossible de charger les tâches')
+    }
   }, [])
 
+  useEffect(() => {
+    loadTodos()
+  }, [loadTodos])
+
   const addTodo = async () => {
-    if (!text.trim()) return
-    const r = await fetch(`${API}/todos`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-    })
-    const newTodo = await r.json()
-    setTodos([newTodo, ...todos])
-    setText('')
+    const trimmed = text.trim()
+    if (!trimmed) return
+    try {
+      const res = await apiFetch(`${API}/todos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: trimmed }),
+      })
+      const newTodo: Todo = await res.json()
+      setTodos(prev => [newTodo, ...prev])
+      setText('')
+      setError(null)
+    } catch {
+      setError('Impossible d\'ajouter la tâche')
+    }
   }
 
   const toggleTodo = async (id: number) => {
-    const r = await fetch(`${API}/todos/${id}`, { method: 'PATCH' })
-    const updated = await r.json()
-    setTodos(todos.map(t => t.id === id ? updated : t))
+    try {
+      const res = await apiFetch(`${API}/todos/${id}`, { method: 'PATCH' })
+      const updated: Todo = await res.json()
+      setTodos(prev => prev.map(t => t.id === id ? updated : t))
+    } catch {
+      setError('Impossible de modifier la tâche')
+    }
   }
 
   const deleteTodo = async (id: number) => {
-    await fetch(`${API}/todos/${id}`, { method: 'DELETE' })
-    setTodos(todos.filter(t => t.id !== id))
+    try {
+      await apiFetch(`${API}/todos/${id}`, { method: 'DELETE' })
+      setTodos(prev => prev.filter(t => t.id !== id))
+    } catch {
+      setError('Impossible de supprimer la tâche')
+    }
   }
 
   const handleKey = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -59,6 +87,13 @@ export default function App() {
           <p style={styles.subtitle}>DevSecOps Project · Todo App</p>
         </div>
 
+        {error && (
+          <div style={styles.errorBox} role="alert">
+            {error}
+            <button style={styles.errorClose} onClick={() => setError(null)}>✕</button>
+          </div>
+        )}
+
         <div style={styles.inputRow}>
           <input
             style={styles.input}
@@ -66,8 +101,10 @@ export default function App() {
             onChange={e => setText(e.target.value)}
             onKeyDown={handleKey}
             placeholder="Ajouter une tâche..."
+            maxLength={500}
+            aria-label="Nouvelle tâche"
           />
-          <button style={styles.btnAdd} onClick={addTodo}>+</button>
+          <button style={styles.btnAdd} onClick={addTodo} aria-label="Ajouter">+</button>
         </div>
 
         <div style={styles.stats}>
@@ -92,13 +129,20 @@ export default function App() {
               <button
                 style={{ ...styles.checkBtn, background: t.done ? '#c8f060' : 'transparent', borderColor: t.done ? '#c8f060' : '#3e3d38' }}
                 onClick={() => toggleTodo(t.id)}
+                aria-label={t.done ? 'Marquer non terminée' : 'Marquer terminée'}
               >
                 {t.done ? '✓' : ''}
               </button>
               <span style={{ ...styles.todoText, textDecoration: t.done ? 'line-through' : 'none', color: t.done ? '#4a4945' : '#d0cdc6' }}>
                 {t.text}
               </span>
-              <button style={styles.delBtn} onClick={() => deleteTodo(t.id)}>✕</button>
+              <button
+                style={styles.delBtn}
+                onClick={() => deleteTodo(t.id)}
+                aria-label="Supprimer la tâche"
+              >
+                ✕
+              </button>
             </div>
           ))}
         </div>
@@ -127,4 +171,6 @@ const styles: Record<string, React.CSSProperties> = {
   todoText: { flex: 1, fontSize: '0.95rem', fontWeight: 300 },
   delBtn: { background: 'transparent', border: 'none', color: '#3e3d38', cursor: 'pointer', fontSize: '1rem', padding: 4, borderRadius: 6 },
   empty: { textAlign: 'center', padding: '3rem 0', color: '#3e3d38', fontSize: '0.9rem', fontStyle: 'italic' },
+  errorBox: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#2a0a0a', border: '1px solid #ff6b6b', borderRadius: 10, padding: '10px 16px', marginBottom: '1rem', color: '#ff6b6b', fontSize: '0.9rem' },
+  errorClose: { background: 'transparent', border: 'none', color: '#ff6b6b', cursor: 'pointer', fontSize: '1rem' },
 }
