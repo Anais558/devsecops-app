@@ -17,6 +17,14 @@ function getSafeApiUrl(): string {
 
 const API = getSafeApiUrl()
 
+const ENDPOINTS = {
+  todos: `${API}/todos`,
+  todo: (id: number) => {
+    const safeId = Math.floor(Math.abs(id))
+    return `${API}/todos/${safeId}`
+  }
+}
+
 interface Todo {
   id: number
   text: string
@@ -24,6 +32,9 @@ interface Todo {
 }
 
 async function apiFetch(url: string, options?: RequestInit): Promise<Response> {
+  if (!url.startsWith(ALLOWED_API)) {
+    throw new Error('URL non autorisée')
+  }
   const res = await fetch(url, options)
   if (!res.ok) throw new Error(`HTTP error: ${res.status}`)
   return res
@@ -36,7 +47,7 @@ export default function App() {
 
   const loadTodos = useCallback(async () => {
     try {
-      const res = await apiFetch(`${API}/todos`)
+      const res = await apiFetch(ENDPOINTS.todos)
       const data: Todo[] = await res.json()
       setTodos(data)
     } catch {
@@ -52,7 +63,7 @@ export default function App() {
     const trimmed = text.trim()
     if (!trimmed) return
     try {
-      const res = await apiFetch(`${API}/todos`, {
+      const res = await apiFetch(ENDPOINTS.todos, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: trimmed }),
@@ -62,13 +73,13 @@ export default function App() {
       setText('')
       setError(null)
     } catch {
-      setError('Impossible d\'ajouter la tâche')
+      setError("Impossible d'ajouter la tâche")
     }
   }
 
   const toggleTodo = async (id: number) => {
     try {
-      const res = await apiFetch(`${API}/todos/${id}`, { method: 'PATCH' })
+      const res = await apiFetch(ENDPOINTS.todo(id), { method: 'PATCH' })
       const updated: Todo = await res.json()
       setTodos(prev => prev.map(t => t.id === id ? updated : t))
     } catch {
@@ -78,7 +89,7 @@ export default function App() {
 
   const deleteTodo = async (id: number) => {
     try {
-      await apiFetch(`${API}/todos/${id}`, { method: 'DELETE' })
+      await apiFetch(ENDPOINTS.todo(id), { method: 'DELETE' })
       setTodos(prev => prev.filter(t => t.id !== id))
     } catch {
       setError('Impossible de supprimer la tâche')
