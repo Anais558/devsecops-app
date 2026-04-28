@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'NodeJS-22'
+    }
+
     stages {
 
         stage('Checkout') {
@@ -47,18 +51,6 @@ pipeline {
                 dir('frontend') {
                     sh 'npm audit --audit-level=high || true'
                 }
-            }
-        }
-
-        stage('Build Docker Images') {
-            steps {
-                sh 'docker compose build'
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                sh 'docker compose up -d'
             }
         }
     }
