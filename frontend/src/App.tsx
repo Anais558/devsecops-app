@@ -1,7 +1,21 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { KeyboardEvent } from 'react'
 
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api'
+const ALLOWED_API = 'http://localhost:3001/api'
+
+function getSafeApiUrl(): string {
+  const envUrl = import.meta.env.VITE_API_URL
+  if (!envUrl || typeof envUrl !== 'string') return ALLOWED_API
+  try {
+    const parsed = new URL(envUrl)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return ALLOWED_API
+    return envUrl
+  } catch {
+    return ALLOWED_API
+  }
+}
+
+const API = getSafeApiUrl()
 
 interface Todo {
   id: number
