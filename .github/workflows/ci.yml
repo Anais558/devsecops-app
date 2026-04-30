@@ -140,7 +140,7 @@ jobs:
             -Dsonar.sources=backend,frontend
             -Dsonar.exclusions=**/node_modules/**,**/dist/**
 
-# ─── JOB 6 : Snyk ───────────────────────────────────────────────
+# ─── JOB 6 : Snyk ──────────────────────────────────────────────
   snyk-scan:
     name: Snyk – Sécurité dépendances
     runs-on: ubuntu-latest
