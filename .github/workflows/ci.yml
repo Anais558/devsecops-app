@@ -136,7 +136,7 @@ jobs:
         with:
           args: >
             -Dsonar.projectKey=Anais558_devsecops-app
-            -Dsonar.organization=Anais558
+            -Dsonar.organization=anais558
             -Dsonar.sources=backend,frontend
             -Dsonar.exclusions=**/node_modules/**,**/dist/**
 
