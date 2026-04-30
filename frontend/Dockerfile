@@ -5,19 +5,24 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
 
-# Copie ciblée des fichiers nécessaires
+# Copier uniquement dépendances
 COPY package*.json ./
-RUN npm install
 
+# Sécurité + reproductibilité CI/CD
+RUN npm ci --ignore-scripts
+
+# Copier le reste du projet
 COPY src/ ./src/
 COPY index.html ./
 COPY vite.config.* ./
 COPY tsconfig*.json ./
 
-# Changer le propriétaire
+# permissions
 RUN chown -R appuser:appgroup /app
 
 USER appuser
 
 EXPOSE 5173
+
+# mode dev sécurisé
 CMD ["npm", "run", "dev", "--", "--host"]

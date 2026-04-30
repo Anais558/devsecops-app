@@ -5,9 +5,11 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
 
-# Copie ciblée des fichiers nécessaires
+# Copie des fichiers de dépendances
 COPY package*.json ./
-RUN npm install --omit=dev
+
+# Sécurité + reproductibilité CI/CD
+RUN npm ci --omit=dev --ignore-scripts
 
 COPY src/ ./src/
 
@@ -17,4 +19,5 @@ RUN chown -R appuser:appgroup /app
 USER appuser
 
 EXPOSE 3001
+
 CMD ["node", "src/index.js"]
