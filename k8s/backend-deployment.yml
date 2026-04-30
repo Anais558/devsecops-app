@@ -7,39 +7,66 @@ spec:
   selector:
     matchLabels:
       app: backend
+
   template:
     metadata:
       labels:
         app: backend
+
     spec:
+      # Correction SonarQube :
+      # Désactive l’automount automatique du service account token
+      automountServiceAccountToken: false
+
       containers:
         - name: backend
           image: devsecops-app-backend:latest
           imagePullPolicy: Never
+
           env:
             - name: DB_HOST
               value: "db"
+
             - name: DB_PORT
               value: "5432"
+
             - name: DB_USER
               value: "todo_user"
+
             - name: DB_PASSWORD
               value: "todo_pass"
+
             - name: DB_NAME
               value: "todo_db"
+
             - name: PORT
               value: "3001"
+
           ports:
             - containerPort: 3001
+
+          # Correction SonarQube :
+          # Ajout des limites mémoire
+          resources:
+            requests:
+              memory: "128Mi"
+
+            limits:
+              memory: "256Mi"
+
 ---
 apiVersion: v1
 kind: Service
+
 metadata:
   name: backend
+
 spec:
   selector:
     app: backend
+
   ports:
     - port: 3001
       targetPort: 3001
+
   type: ClusterIP

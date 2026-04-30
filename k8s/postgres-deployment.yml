@@ -2,54 +2,86 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: postgres-pvc
+
 spec:
   accessModes:
     - ReadWriteOnce
+
   resources:
     requests:
       storage: 1Gi
+
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgres
+
 spec:
   replicas: 1
+
   selector:
     matchLabels:
       app: postgres
+
   template:
     metadata:
       labels:
         app: postgres
+
     spec:
+      # Correction SonarQube :
+      # Désactive l’automount automatique du service account token
+      automountServiceAccountToken: false
+
       containers:
         - name: postgres
           image: postgres:15
+
           env:
             - name: POSTGRES_USER
               value: "todo_user"
+
             - name: POSTGRES_PASSWORD
               value: "todo_pass"
+
             - name: POSTGRES_DB
               value: "todo_db"
+
           ports:
             - containerPort: 5432
+
           volumeMounts:
             - mountPath: /var/lib/postgresql/data
               name: postgres-storage
+
+          # Correction SonarQube :
+          # Ajout des limites mémoire + stockage éphémère
+          resources:
+            requests:
+              memory: "256Mi"
+              ephemeral-storage: "512Mi"
+
+            limits:
+              memory: "512Mi"
+              ephemeral-storage: "1Gi"
+
       volumes:
         - name: postgres-storage
           persistentVolumeClaim:
             claimName: postgres-pvc
+
 ---
 apiVersion: v1
 kind: Service
+
 metadata:
   name: db
+
 spec:
   selector:
     app: postgres
+
   ports:
     - port: 5432
       targetPort: 5432
